@@ -1,4 +1,4 @@
-module github.com/borkin8r/ToM4A
+module github.com/borkin8r/tom4a
 
 go 1.17
 

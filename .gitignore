@@ -7,7 +7,7 @@
 *.dll
 *.so
 *.dylib
-ToM4A
+tom4a
 
 # Test binary, built with `go test -c`
 *.test
