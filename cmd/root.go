@@ -12,6 +12,10 @@ import (
 	"fmt"
 
 	"log"
+
+	"strings"
+
+	"io"
 )
 
 
@@ -37,8 +41,34 @@ to quickly create a Cobra application.`,
 
 		for _, file := range files {
 			fmt.Println(file.Name())
-		}
+			if len(file.Name()) > 4 && strings.Contains(file.Name(), ".mp4") {
+				splitIndex := len(file.Name()) - 4 //".mp4"
+				name := file.Name()[:splitIndex]
+				fin, err := os.Open(file.Name())
+				if err != nil {
+					//TODO: log error
+					continue
+				}
+				m4aFullName := fmt.Sprintf("%s.m4a", name)
+				fout, err := os.Create(m4aFullName)
+				if err != nil {
+					//TODO: log error
+					fin.Close() //TODO refactor into function to simplify with defer?
+					continue
+				}
 
+				if _, err := io.Copy(fout, fin); err != nil { // check file sizes match?
+					//TODO: log error
+					fin.Close() //TODO refactor into function to simplify with defer?
+					fout.Close()
+					continue
+				}
+
+				fin.Close() //TODO err check?
+				fout.Close()
+			}
+			//TODO: log skip if verbose?
+		}
 	},
 }
 
