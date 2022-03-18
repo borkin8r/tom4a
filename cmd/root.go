@@ -18,8 +18,6 @@ import (
 	"io"
 )
 
-
-
 // rootCmd represents the base command when called without any subcommands
 var rootCmd = &cobra.Command{
 	Use:   "ToM4A",
@@ -33,41 +31,46 @@ to quickly create a Cobra application.`,
 	// Uncomment the following line if your bare application
 	// has an action associated with it:
 	Run: func(cmd *cobra.Command, args []string) {
-		files, err := os.ReadDir(".");
+		files, err := os.ReadDir(".")
 
 		if err != nil {
 			log.Fatal(err)
 		}
 
-		for _, file := range files {
-			fmt.Println(file.Name())
-			if len(file.Name()) > 4 && strings.Contains(file.Name(), ".mp4") {
-				splitIndex := len(file.Name()) - 4 //".mp4"
-				name := file.Name()[:splitIndex]
-				fin, err := os.Open(file.Name())
-				if err != nil {
-					//TODO: log error
-					continue
-				}
-				m4aFullName := fmt.Sprintf("%s.m4a", name)
-				fout, err := os.Create(m4aFullName)
-				if err != nil {
-					//TODO: log error
-					fin.Close() //TODO refactor into function to simplify with defer?
-					continue
-				}
+		for _, dirEntry := range files {
+			fmt.Println(dirEntry.Name())
+			if dirEntry.IsDir() {
+				// is a directory
+			} else {
+				if len(dirEntry.Name()) > 4 && strings.Contains(dirEntry.Name(), ".mp4") {
+					splitIndex := len(dirEntry.Name()) - 4 //".mp4"
+					name := dirEntry.Name()[:splitIndex]
+					fin, err := os.Open(dirEntry.Name())
+					if err != nil {
+						fmt.Println(err)
+						continue
+					}
+					m4aFullName := fmt.Sprintf("%s.m4a", name)
+					fout, err := os.Create(m4aFullName)
+					if err != nil {
+						fmt.Println(err)
+						fin.Close() //TODO refactor into function to simplify with defer?
+						continue
+					}
 
-				if _, err := io.Copy(fout, fin); err != nil { // check file sizes match?
-					//TODO: log error
-					fin.Close() //TODO refactor into function to simplify with defer?
+					if _, err := io.Copy(fout, fin); err != nil { // check file sizes match?
+						fmt.Println(err)
+						fin.Close() //TODO refactor into function to simplify with defer?
+						fout.Close()
+						continue
+					}
+
+					fin.Close() //TODO err check?
 					fout.Close()
-					continue
+				} else {
+					fmt.Println(fmt.Sprintf("skipped %s", dirEntry.Name()))
 				}
-
-				fin.Close() //TODO err check?
-				fout.Close()
 			}
-			//TODO: log skip if verbose?
 		}
 	},
 }
@@ -92,5 +95,3 @@ func init() {
 	// when this action is called directly.
 	rootCmd.Flags().BoolP("toggle", "t", false, "Help message for toggle")
 }
-
-
