@@ -19,60 +19,72 @@ import (
 )
 
 // rootCmd represents the base command when called without any subcommands
-var rootCmd = &cobra.Command{
-	Use:   "ToM4A",
-	Short: "Change MP4 to M4A",
-	Long: `A longer description that spans multiple lines and likely contains
-examples and usage of using your application. For example:
+var (
+		Recursive bool
 
-Cobra is a CLI library for Go that empowers applications.
-This application is a tool to generate the needed files
-to quickly create a Cobra application.`,
-	// Uncomment the following line if your bare application
-	// has an action associated with it:
-	Run: func(cmd *cobra.Command, args []string) {
-		files, err := os.ReadDir(".")
+		rootCmd = &cobra.Command{
+			Use:   "tom4a [Options]",
+			Short: "Change MP4 to M4A",
+			Long: `Creates a .M4A files by copying .MP4 files
+			example:
+			tom4a
 
-		if err != nil {
-			log.Fatal(err)
+			options:
+
+			-r search subdirectories and make .M4A files there as well
+
+			`,
+			// Uncomment the following line if your bare application
+			// has an action associated with it:
+			Run: func(cmd *cobra.Command, args []string) {
+				IterateDir(".")
+			},
 		}
+)
 
-		for _, dirEntry := range files {
-			fmt.Println(dirEntry.Name())
-			if dirEntry.IsDir() {
-				// is a directory
+func IterateDir(name string) {
+	files, err := os.ReadDir(".")
+
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	for _, dirEntry := range files {
+		fmt.Println(dirEntry.Name())
+		if dirEntry.IsDir() {
+			IterateDir(dirEntry.Name())
+		} else {
+			if len(dirEntry.Name()) > 4 && strings.Contains(dirEntry.Name(), ".mp4") {
+				ToM4A(dirEntry)
 			} else {
-				if len(dirEntry.Name()) > 4 && strings.Contains(dirEntry.Name(), ".mp4") {
-					splitIndex := len(dirEntry.Name()) - 4 //".mp4"
-					name := dirEntry.Name()[:splitIndex]
-					fin, err := os.Open(dirEntry.Name())
-					if err != nil {
-						fmt.Println(err)
-						continue
-					}
-					m4aFullName := fmt.Sprintf("%s.m4a", name)
-					fout, err := os.Create(m4aFullName)
-					if err != nil {
-						fmt.Println(err)
-						fin.Close() //TODO refactor into function to simplify with defer?
-						continue
-					}
-
-					if _, err := io.Copy(fout, fin); err != nil { // check file sizes match?
-						fmt.Println(err)
-						fin.Close() //TODO refactor into function to simplify with defer?
-						fout.Close()
-						continue
-					}
-
-					fin.Close() //TODO err check?
-					fout.Close()
-				} else {
-					fmt.Println(fmt.Sprintf("skipped %s", dirEntry.Name()))
-				}
+				fmt.Println(fmt.Sprintf("skipped %s", dirEntry.Name()))
 			}
 		}
-	},
+	}
+}
+
+func ToM4A(dirEntry os.DirEntry) {
+	splitIndex := len(dirEntry.Name()) - 4 //".mp4"
+	name := dirEntry.Name()[:splitIndex]
+	fin, err := os.Open(dirEntry.Name())
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
+	defer fin.Close() //TODO refactor into function to simplify with defer?
+
+	m4aFullName := fmt.Sprintf("%s.m4a", name)
+	fout, err := os.Create(m4aFullName)
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
+	defer fout.Close()
+
+	if _, err := io.Copy(fout, fin); err != nil { // check file sizes match?
+		fmt.Println(err)
+		return
+	}
 }
 
 // Execute adds all child commands to the root command and sets flags appropriately.
@@ -93,5 +105,6 @@ func init() {
 
 	// Cobra also supports local flags, which will only run
 	// when this action is called directly.
+	rootCmd.Flags().BoolVarP(&Recursive, "recursive", "r", false, "iterate over subdirectories")
 	rootCmd.Flags().BoolP("toggle", "t", false, "Help message for toggle")
 }
