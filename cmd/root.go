@@ -52,10 +52,10 @@ func IterateDir(name string) {
 	for _, dirEntry := range files {
 		fmt.Println(dirEntry.Name())
 		if dirEntry.IsDir() {
-			IterateDir(dirEntry.Name())
+			go IterateDir(dirEntry.Name())
 		} else {
 			if len(dirEntry.Name()) > 4 && strings.Contains(dirEntry.Name(), ".mp4") {
-				ToM4A(dirEntry)
+				go ToM4A(dirEntry)
 			} else {
 				fmt.Println(fmt.Sprintf("skipped %s", dirEntry.Name()))
 			}
