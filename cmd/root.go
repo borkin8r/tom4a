@@ -11,11 +11,11 @@ import (
 
 	"fmt"
 
-	"log"
-
 	"strings"
 
 	"io"
+
+	"path/filepath"
 )
 
 // rootCmd represents the base command when called without any subcommands
@@ -43,19 +43,22 @@ var (
 )
 
 func IterateDir(name string) {
-	files, err := os.ReadDir(".")
+	files, err := os.ReadDir(name)
+		fmt.Println(name)
 
 	if err != nil {
-		log.Fatal(err)
+		fmt.Println(err)
 	}
 
-	for _, dirEntry := range files {
-		fmt.Println(dirEntry.Name())
-		if dirEntry.IsDir() {
-			go IterateDir(dirEntry.Name())
-		} else {
+	for _, dirEntry := range files { //TODO create workers and orchestrate through goroutines/channels
+		if dirEntry.Name()[0] == '.' { //TODO change to option
+			continue;
+		}
+		if dirEntry.IsDir() && Recursive {
+			IterateDir(filepath.Join(name, dirEntry.Name())) //TODO need full path?
+		} else if !dirEntry.IsDir() {
 			if len(dirEntry.Name()) > 4 && strings.Contains(dirEntry.Name(), ".mp4") {
-				go ToM4A(dirEntry)
+				ToM4A(dirEntry)
 			} else {
 				fmt.Println(fmt.Sprintf("skipped %s", dirEntry.Name()))
 			}
