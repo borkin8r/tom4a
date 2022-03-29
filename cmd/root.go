@@ -16,8 +16,6 @@ import (
 	"io"
 
 	"path/filepath"
-
-	"io/fs"
 )
 
 // rootCmd represents the base command when called without any subcommands
@@ -42,7 +40,7 @@ var (
 			// has an action associated with it:
 			Run: func(cmd *cobra.Command, args []string) {
 
-				err := filepath.Walk(FolderPath, func(path string, info fs.FileInfo, err error) error {
+				err := filepath.WalkDir(FolderPath, func(path string, info os.DirEntry, err error) error {
 					if err != nil {
 						fmt.Printf("prevent panic by handling failure accessing a path %q: %v\n", path, err)
 						return err
