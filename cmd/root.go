@@ -16,11 +16,14 @@ import (
 	"io"
 
 	"path/filepath"
+
+	"io/fs"
 )
 
 // rootCmd represents the base command when called without any subcommands
 var (
 		Recursive bool
+		FolderPath string
 
 		rootCmd = &cobra.Command{
 			Use:   "tom4a [Options]",
@@ -32,39 +35,46 @@ var (
 			options:
 
 			-r search subdirectories and make .M4A files there as well
+			-p <path> the path to the folder containing the .mp4 files
 
 			`,
 			// Uncomment the following line if your bare application
 			// has an action associated with it:
 			Run: func(cmd *cobra.Command, args []string) {
-				IterateDir(".")
+
+				err := filepath.Walk(FolderPath, func(path string, info fs.FileInfo, err error) error {
+					if err != nil {
+						fmt.Printf("prevent panic by handling failure accessing a path %q: %v\n", path, err)
+						return err
+					}
+					if info.IsDir() && !Recursive {
+						fmt.Printf("skipping a dir without errors: %+v \n", info.Name())
+						return filepath.SkipDir
+					}
+
+					files, err := os.ReadDir(path)
+
+					if err != nil {
+						fmt.Println(err)
+					}
+
+					for _, dirEntry := range files { //TODO use errgrp pkg to wait for all goroutines
+						if len(dirEntry.Name()) > 4 && strings.Contains(dirEntry.Name(), ".mp4") {
+							ToM4A(dirEntry)
+						} else {
+							fmt.Println(fmt.Sprintf("skipped %s\n", dirEntry.Name()))
+						}
+					}
+					fmt.Printf("visited file or dir: %q\n", path)
+					return nil
+				})
+				if err != nil {
+					fmt.Printf("error walking the path: %v\n", err)
+					return
+				}
 			},
 		}
 )
-
-func IterateDir(name string) {
-	files, err := os.ReadDir(name)
-		fmt.Println(name)
-
-	if err != nil {
-		fmt.Println(err)
-	}
-
-	for _, dirEntry := range files { //TODO create workers and orchestrate through goroutines/channels
-		if dirEntry.Name()[0] == '.' { //TODO change to option
-			continue;
-		}
-		if dirEntry.IsDir() && Recursive {
-			IterateDir(filepath.Join(name, dirEntry.Name())) //TODO need full path?
-		} else if !dirEntry.IsDir() {
-			if len(dirEntry.Name()) > 4 && strings.Contains(dirEntry.Name(), ".mp4") {
-				ToM4A(dirEntry)
-			} else {
-				fmt.Println(fmt.Sprintf("skipped %s", dirEntry.Name()))
-			}
-		}
-	}
-}
 
 func ToM4A(dirEntry os.DirEntry) {
 	splitIndex := len(dirEntry.Name()) - 4 //".mp4"
@@ -108,6 +118,7 @@ func init() {
 
 	// Cobra also supports local flags, which will only run
 	// when this action is called directly.
+	rootCmd.Flags().StringVarP(&FolderPath, "folder path", "p", ".", "path to target folder to run in")
 	rootCmd.Flags().BoolVarP(&Recursive, "recursive", "r", false, "iterate over subdirectories")
 	rootCmd.Flags().BoolP("toggle", "t", false, "Help message for toggle")
 }
