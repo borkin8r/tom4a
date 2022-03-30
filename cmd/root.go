@@ -16,6 +16,8 @@ import (
 	"io"
 
 	"path/filepath"
+
+	"sync"
 )
 
 // rootCmd represents the base command when called without any subcommands
@@ -40,6 +42,8 @@ var (
 			// has an action associated with it:
 			Run: func(cmd *cobra.Command, args []string) {
 
+				var wg sync.WaitGroup
+
 				err := filepath.WalkDir(FolderPath, func(path string, info os.DirEntry, err error) error {
 					if err != nil {
 						fmt.Printf("prevent panic by handling failure accessing a path %q: %v\n", path, err)
@@ -58,7 +62,8 @@ var (
 
 					for _, dirEntry := range files { //TODO use errgrp pkg to wait for all goroutines
 						if len(dirEntry.Name()) > 4 && strings.Contains(dirEntry.Name(), ".mp4") {
-							ToM4A(dirEntry)
+							wg.Add(1)
+							ToM4A(dirEntry, &wg)
 						} else {
 							fmt.Println(fmt.Sprintf("skipped %s\n", dirEntry.Name()))
 						}
@@ -70,11 +75,13 @@ var (
 					fmt.Printf("error walking the path: %v\n", err)
 					return
 				}
+				wg.Wait()
 			},
 		}
 )
 
-func ToM4A(dirEntry os.DirEntry) {
+func ToM4A(dirEntry os.DirEntry, wg *sync.WaitGroup) {
+	defer wg.Done()
 	splitIndex := len(dirEntry.Name()) - 4 //".mp4"
 	name := dirEntry.Name()[:splitIndex]
 	fin, err := os.Open(dirEntry.Name())
@@ -85,7 +92,7 @@ func ToM4A(dirEntry os.DirEntry) {
 	defer fin.Close() //TODO refactor into function to simplify with defer?
 
 	m4aFullName := fmt.Sprintf("%s.m4a", name)
-	fout, err := os.Create(m4aFullName)
+	fout, err := os.Create(m4aFullName) //TODO test file created is in same folder as original file, not where the command is running
 	if err != nil {
 		fmt.Println(err)
 		return
